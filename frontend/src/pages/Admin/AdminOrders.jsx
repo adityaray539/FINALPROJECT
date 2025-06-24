@@ -1,0 +1,139 @@
+import axios from "axios";
+import AdminMenu from "../../components/Layout/AdminMenu";
+import Layout from "../../components/Layout/Layout";
+import { toast } from "react-toastify";
+import { useEffect, useState } from "react";
+import moment from "moment";
+import { CheckCircle, XCircle } from "lucide-react";
+import { useAuth } from "../../context/auth";
+import { Select } from "antd";
+const { Option } = Select;
+
+const AdminOrders = () => {
+  const [status, setStatus] = useState([
+    "Not Process",
+    "Processing",
+    "Delivered",
+    "Cancel",
+  ]);
+  const [orders, setOrders] = useState([]);
+  const [auth] = useAuth();
+
+  const getOrders = async () => {
+    try {
+      const { data } = await axios.get("/api/v1/auth/all-orders");
+      setOrders(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handleChange = async (orderId, value) => {
+    try {
+      const { data } = await axios.put(`/api/v1/auth/order-status/${orderId}`, {
+        status: value,
+      });
+      toast.success("Order status updated");
+      getOrders();
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed to update status");
+    }
+  };
+
+  useEffect(() => {
+    if (auth?.token) getOrders();
+  }, [auth?.token]);
+
+  return (
+    <Layout title={"Dashboard - All Orders Data | AgriVatika"}>
+      <div className="flex m-3 p-3">
+        <div className="w-1/4 mt-16">
+          <AdminMenu />
+        </div>
+        <div className="w-3/4 m-5 mt-16">
+          <h1 className="text-center text-green-500 text-2xl">
+            ➡➡ All Orders ⬅⬅
+          </h1>
+          <table className="min-w-full table-auto border border-gray-300 shadow-md rounded-xl overflow-hidden">
+            <thead className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+              <tr>
+                <th className="p-4">#</th>
+                <th className="p-4">Status</th>
+                <th className="p-4">Buyer</th>
+                <th className="p-4">Date</th>
+                <th className="p-4">Payment</th>
+                <th className="p-4">Quantity</th>
+                <th className="p-4">Products</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map((o, i) => (
+                <tr
+                  key={o._id}
+                  className="text-center border-b transition-transform transform hover:scale-105 hover:bg-gray-100 border-gray-300"
+                >
+                  <td className="p-4 font-semibold">{i + 1}</td>
+                  <td className="p-4">
+                    <Select
+                      bordered={false}
+                      onChange={(value) => handleChange(o._id, value)}
+                      defaultValue={o?.status}
+                      className="w-40"
+                    >
+                      {status.map((s, idx) => (
+                        <Option key={idx} value={s}>
+                          {s}
+                        </Option>
+                      ))}
+                    </Select>
+                  </td>
+                  <td className="p-4 font-medium">{o?.buyer?.name}</td>
+                  <td className="p-4 text-gray-500">
+                    {moment(o?.createdAt).fromNow()}
+                  </td>
+                  <td className="p-4">
+                    {o?.payment?.success ? (
+                      <CheckCircle className="text-green-500" size={20} />
+                    ) : (
+                      <XCircle className="text-red-500" size={20} />
+                    )}
+                  </td>
+                  <td className="p-4 font-semibold text-gray-700">
+                    {o?.products?.length}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex flex-col gap-2">
+                      {o?.products?.map((p) => (
+                        <div
+                          key={p._id}
+                          className="flex items-center bg-gray-50 p-3 rounded-lg shadow-sm border border-gray-200"
+                        >
+                          <img
+                            src={`/api/v1/product/product-photo/${p._id}`}
+                            alt={p.name}
+                            className="w-16 h-16 object-cover rounded-lg mr-4"
+                          />
+                          <div>
+                            <p className="font-semibold text-gray-800">
+                              {p.name}
+                            </p>
+                            <p className="text-green-600 font-bold">
+                              ₹{p.price}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+export default AdminOrders;
